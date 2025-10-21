@@ -1,4 +1,4 @@
-// Eis Granola Sync Plugin - Fixed Settings Access in generateNoteContent
+// Eis Granola Sync Plugin - Fixed Attendee Extraction (Exact Copy from Original Plugin)
 const obsidian = require('obsidian');
 const path = require('path');
 const fs = require('fs');
@@ -277,6 +277,9 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                             if (Array.isArray(firstDoc.people) && firstDoc.people.length > 0) {
                                 console.log('First person keys:', Object.keys(firstDoc.people[0]));
                                 console.log('First person sample:', JSON.stringify(firstDoc.people[0], null, 2));
+                            } else if (typeof firstDoc.people === 'object') {
+                                console.log('People object keys:', Object.keys(firstDoc.people));
+                                console.log('People object sample:', JSON.stringify(firstDoc.people, null, 2));
                             }
                         }
                     }
@@ -441,7 +444,6 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             finalMarkdown += markdownContent + '\n\n';
         }
         
-        // FIXED: Use this.settings instead of this.plugin.settings (we're in the main plugin class)
         if (this.settings.includeFullTranscript && transcript) {
             finalMarkdown += '## Full Transcript\n\n' + transcript;
             console.log(`Added full transcript section (${transcript.length} chars)`);
@@ -461,7 +463,11 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             const attendees = this.extractAttendeeNames(doc);
             console.log(`Found ${attendees.length} attendees for property replacement`);
             if (attendees.length > 0) {
-                return value.replace('{attendees}', attendees.join(', ')).replace('{participants}', attendees.join(', '));
+                // Format each attendee name as [[name]] for Obsidian internal links
+                const formattedAttendees = attendees.map(name => `[[${name}]]`);
+                const formattedValue = value.replace('{attendees}', formattedAttendees.join(', ')).replace('{participants}', formattedAttendees.join(', '));
+                console.log(`Formatted attendees: ${formattedValue}`);
+                return formattedValue;
             } else {
                 return value.replace('{attendees}', 'No attendees').replace('{participants}', 'No participants');
             }
@@ -477,52 +483,77 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             console.log('=== EXTRACTING ATTENDEES ===');
             console.log('Available fields:', Object.keys(doc));
             
-            // Check the people field for attendee information (enhanced with detailed person data)
-            if (doc.people && Array.isArray(doc.people)) {
-                console.log(`Processing ${doc.people.length} people entries`);
+            // EXACT COPY FROM ORIGINAL PLUGIN - Handle people.creator and people.attendees
+            if (doc.people && typeof doc.people === 'object') {
+                console.log('Processing people object structure');
                 
-                for (const person of doc.people) {
-                    console.log('Processing person:', JSON.stringify(person, null, 2));
+                // Process creator if available
+                if (doc.people.creator) {
+                    const creator = doc.people.creator;
+                    console.log('Processing creator:', JSON.stringify(creator, null, 2));
                     
-                    let name = null;
+                    let creatorName = null;
                     
-                    // Try to get name from various fields
-                    if (person.name) {
-                        name = person.name;
-                        console.log(`Found name from person.name: ${name}`);
-                    } else if (person.display_name) {
-                        name = person.display_name;
-                        console.log(`Found name from person.display_name: ${name}`);
-                    } else if (person.details && person.details.person && person.details.person.name) {
-                        // Use the detailed person information if available
-                        const personDetails = person.details.person.name;
-                        console.log('Person details:', JSON.stringify(personDetails, null, 2));
-                        
+                    // Try to get creator name from various fields
+                    if (creator.name) {
+                        creatorName = creator.name;
+                        console.log(`Found creator name: ${creatorName}`);
+                    } else if (creator.details && creator.details.person && creator.details.person.name) {
+                        const personDetails = creator.details.person.name;
                         if (personDetails.fullName) {
-                            name = personDetails.fullName;
-                            console.log(`Found name from personDetails.fullName: ${name}`);
+                            creatorName = personDetails.fullName;
+                            console.log(`Found creator name from fullName: ${creatorName}`);
                         } else if (personDetails.givenName && personDetails.familyName) {
-                            name = `${personDetails.givenName} ${personDetails.familyName}`;
-                            console.log(`Found name from givenName + familyName: ${name}`);
+                            creatorName = `${personDetails.givenName} ${personDetails.familyName}`;
+                            console.log(`Found creator name from givenName + familyName: ${creatorName}`);
                         } else if (personDetails.givenName) {
-                            name = personDetails.givenName;
-                            console.log(`Found name from personDetails.givenName: ${name}`);
+                            creatorName = personDetails.givenName;
+                            console.log(`Found creator name from givenName: ${creatorName}`);
                         }
-                    } else if (person.email) {
-                        // Extract name from email if no display name
-                        const emailName = person.email.split('@')[0].replace(/[._]/g, ' ');
-                        name = emailName;
-                        console.log(`Found name from email: ${name}`);
                     }
                     
-                    if (name && !attendees.includes(name)) {
-                        attendees.push(name);
-                        console.log(`Added attendee: ${name}`);
+                    if (creatorName && !attendees.includes(creatorName)) {
+                        attendees.push(creatorName);
+                        console.log(`Added creator: ${creatorName}`);
                     }
+                }
+                
+                // Process attendees array if available
+                if (doc.people.attendees && Array.isArray(doc.people.attendees)) {
+                    console.log(`Processing ${doc.people.attendees.length} attendees from people.attendees`);
                     
-                    if (person.email) {
-                        processedEmails.add(person.email);
-                        console.log(`Tracked email: ${person.email}`);
+                    for (const attendee of doc.people.attendees) {
+                        console.log('Processing attendee from people.attendees:', JSON.stringify(attendee, null, 2));
+                        
+                        let attendeeName = null;
+                        
+                        // Try to get attendee name from various fields
+                        if (attendee.name) {
+                            attendeeName = attendee.name;
+                            console.log(`Found attendee name: ${attendeeName}`);
+                        } else if (attendee.details && attendee.details.person && attendee.details.person.name) {
+                            const personDetails = attendee.details.person.name;
+                            if (personDetails.fullName) {
+                                attendeeName = personDetails.fullName;
+                                console.log(`Found attendee name from fullName: ${attendeeName}`);
+                            } else if (personDetails.givenName && personDetails.familyName) {
+                                attendeeName = `${personDetails.givenName} ${personDetails.familyName}`;
+                                console.log(`Found attendee name from givenName + familyName: ${attendeeName}`);
+                            } else if (personDetails.givenName) {
+                                attendeeName = personDetails.givenName;
+                                console.log(`Found attendee name from givenName: ${attendeeName}`);
+                            }
+                        } else if (attendee.email) {
+                            // Extract name from email if no display name
+                            const emailName = attendee.email.split('@')[0].replace(/[._]/g, ' ');
+                            attendeeName = emailName;
+                            console.log(`Found attendee name from email: ${attendeeName}`);
+                        }
+                        
+                        if (attendeeName && !attendees.includes(attendeeName)) {
+                            attendees.push(attendeeName);
+                            console.log(`Added attendee: ${attendeeName}`);
+                        }
                     }
                 }
             }
