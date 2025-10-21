@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS = {
     includeFullTranscript: false,
     autoSyncInterval: 0,
     customProperties: [],
-    granolaUrlFormat: 'meeting' // meeting, meetings, app-meeting, app-meetings, short, document, documents
+    granolaUrlFormat: 'notes' // meeting, meetings, app-meeting, app-meetings, short, document, documents, notes
 };
 
 class EisGranolaSyncPlugin extends obsidian.Plugin {
@@ -411,7 +411,8 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             'app-meetings': `https://app.granola.ai/meetings/${docId}`,
             'short': `https://granola.ai/m/${docId}`,
             'document': `https://granola.ai/document/${docId}`,
-            'documents': `https://granola.ai/documents/${docId}`
+            'documents': `https://granola.ai/documents/${docId}`,
+            'notes': `https://notes.granola.ai/d/${docId}` // ← CORRETO!
         };
 
         const granolaUrl = urlFormats[this.settings.granolaUrlFormat] || urlFormats['meeting'];
@@ -896,14 +897,15 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
             .setName('Granola URL Format')
             .setDesc('Choose the URL format for Granola links (try different options if links are not working)')
             .addDropdown(dropdown => dropdown
-                .addOption('meeting', 'granola.ai/meeting (default)')
+                .addOption('meeting', 'granola.ai/meeting')
                 .addOption('meetings', 'granola.ai/meetings')
                 .addOption('app-meeting', 'app.granola.ai/meeting')
                 .addOption('app-meetings', 'app.granola.ai/meetings')
                 .addOption('short', 'granola.ai/m (short)')
                 .addOption('document', 'granola.ai/document')
                 .addOption('documents', 'granola.ai/documents')
-                .setValue(this.plugin.settings.granolaUrlFormat || 'meeting')
+                .addOption('notes', 'notes.granola.ai/d (recommended)')
+                .setValue(this.plugin.settings.granolaUrlFormat || 'notes')
                 .onChange(async (value) => {
                     this.plugin.settings.granolaUrlFormat = value;
                     await this.plugin.saveData(this.plugin.settings);
