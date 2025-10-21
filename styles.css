@@ -1,0 +1,41 @@
+/* Eis Granola Sync Plugin Styles */
+
+.remove-property-button {
+    background-color: var(--color-red) !important;
+    color: white !important;
+}
+
+.remove-property-button:hover {
+    background-color: #d32f2f !important;
+}
+
+.custom-property-form input {
+    border: 1px solid var(--background-modifier-border);
+    padding: 8px;
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+}
+
+.custom-property-form input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.custom-property-form button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.custom-property-form button:not(.remove-property-button) {
+    background-color: var(--interactive-accent);
+    color: white;
+}
+
+.custom-property-form button:not(.remove-property-button):hover {
+    background-color: var(--interactive-accent-hover);
+}
