@@ -365,6 +365,7 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
         const sanitizedTitle = this.sanitizeText(formattedTitle);
         console.log(`Filename generation: "${doc.title}" -> "${formattedTitle}" -> "${sanitizedTitle}"`);
+        console.log(`Filename generation: Same formatting applied to H1 title`);
         return `${sanitizedTitle}.md`;
     }
 
@@ -448,11 +449,22 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
         frontmatter += '---\n\n';
         
+        // Apply same formatting (prefix/suffix) as filename generation
+        let formattedTitle = title;
+        if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
+            const prefix = this.settings.titlePrefix.replace('{date}', new Date().toISOString().split('T')[0]);
+            formattedTitle = `${prefix}${formattedTitle}`;
+        } else if (this.settings.titleFormat === 'suffix' && this.settings.titleSuffix) {
+            const suffix = this.settings.titleSuffix.replace('{date}', new Date().toISOString().split('T')[0]);
+            formattedTitle = `${formattedTitle}${suffix}`;
+        }
+        
         // Use the same sanitized title for both filename and H1
-        const sanitizedTitle = this.sanitizeText(title);
+        const sanitizedTitle = this.sanitizeText(formattedTitle);
         let finalMarkdown = frontmatter + '# ' + sanitizedTitle + '\n\n';
 
         console.log(`Content generation: Original title: "${title}"`);
+        console.log(`Content generation: Formatted title: "${formattedTitle}"`);
         console.log(`Content generation: Sanitized title for H1: "${sanitizedTitle}"`);
         console.log(`Content generation: Filename will be: "${sanitizedTitle}.md"`);
 
