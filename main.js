@@ -24,8 +24,7 @@ const DEFAULT_SETTINGS = {
     titleSuffix: '',
     includeFullTranscript: false,
     autoSyncInterval: 0,
-    customProperties: [],
-    granolaUrlFormat: 'notes' // meeting, meetings, app-meeting, app-meetings, short, document, documents, notes
+    customProperties: []
 };
 
 class EisGranolaSyncPlugin extends obsidian.Plugin {
@@ -403,26 +402,12 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         const cleanTitle = title.replace(/"/g, '\\"');
         frontmatter += `title: "${cleanTitle}"\n`;
         
-        // Try different URL formats for Granola
-        const urlFormats = {
-            'meeting': `https://granola.ai/meeting/${docId}`,
-            'meetings': `https://granola.ai/meetings/${docId}`,
-            'app-meeting': `https://app.granola.ai/meeting/${docId}`,
-            'app-meetings': `https://app.granola.ai/meetings/${docId}`,
-            'short': `https://granola.ai/m/${docId}`,
-            'document': `https://granola.ai/document/${docId}`,
-            'documents': `https://granola.ai/documents/${docId}`,
-            'notes': `https://notes.granola.ai/d/${docId}` // ← CORRETO!
-        };
-
-        const granolaUrl = urlFormats[this.settings.granolaUrlFormat] || urlFormats['meeting'];
+        // Generate correct Granola URL
+        const granolaUrl = `https://notes.granola.ai/d/${docId}`;
         frontmatter += `granola_url: "${granolaUrl}"\n`;
         
-        // Add debug info about URL formats tried
         console.log(`Generated Granola URL: ${granolaUrl}`);
         console.log(`Document ID: ${docId}`);
-        console.log(`Current URL format: ${this.settings.granolaUrlFormat}`);
-        console.log(`Available formats:`, Object.keys(urlFormats));
         
         if (doc.created_at) {
             frontmatter += `created_at: ${doc.created_at}\n`;
@@ -892,24 +877,6 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
 
         // File generation section
         containerEl.createEl('h3', {text: 'File Generation'});
-
-        new obsidian.Setting(containerEl)
-            .setName('Granola URL Format')
-            .setDesc('Choose the URL format for Granola links (try different options if links are not working)')
-            .addDropdown(dropdown => dropdown
-                .addOption('meeting', 'granola.ai/meeting')
-                .addOption('meetings', 'granola.ai/meetings')
-                .addOption('app-meeting', 'app.granola.ai/meeting')
-                .addOption('app-meetings', 'app.granola.ai/meetings')
-                .addOption('short', 'granola.ai/m (short)')
-                .addOption('document', 'granola.ai/document')
-                .addOption('documents', 'granola.ai/documents')
-                .addOption('notes', 'notes.granola.ai/d (recommended)')
-                .setValue(this.plugin.settings.granolaUrlFormat || 'notes')
-                .onChange(async (value) => {
-                    this.plugin.settings.granolaUrlFormat = value;
-                    await this.plugin.saveData(this.plugin.settings);
-                }));
 
         new obsidian.Setting(containerEl)
             .setName('Include Full Transcript')
