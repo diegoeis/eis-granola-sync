@@ -354,7 +354,7 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
     generateFilename(doc) {
         let formattedTitle = doc.title || 'Untitled';
-        
+
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
             const prefix = this.settings.titlePrefix.replace('{date}', new Date().toISOString().split('T')[0]);
             formattedTitle = `${prefix}${formattedTitle}`;
@@ -362,13 +362,20 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             const suffix = this.settings.titleSuffix.replace('{date}', new Date().toISOString().split('T')[0]);
             formattedTitle = `${formattedTitle}${suffix}`;
         }
-        
-        formattedTitle = this.sanitizeText(formattedTitle);
-        return `${formattedTitle}.md`;
+
+        const sanitizedTitle = this.sanitizeText(formattedTitle);
+        console.log(`Filename generation: "${doc.title}" -> "${formattedTitle}" -> "${sanitizedTitle}"`);
+        return `${sanitizedTitle}.md`;
     }
 
     sanitizeText(text) {
-        return text.replace(/[\/\\+]/g, '-');
+        // Remove characters that are invalid for file names and Obsidian links
+        return text
+            .replace(/[[\](){}]/g, '')  // Remove brackets, parentheses, braces
+            .replace(/[\/\\+*#|:"<>?]/g, '-')  // Replace file system invalid chars with dashes
+            .replace(/^\.+|\.+$/g, '')  // Remove leading/trailing dots
+            .replace(/\s+/g, ' ')  // Normalize whitespace
+            .trim();
     }
 
     generateNoteContent(doc) {
@@ -441,9 +448,14 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
         frontmatter += '---\n\n';
         
-        const noteTitle = title;
-        let finalMarkdown = frontmatter + '# ' + noteTitle + '\n\n';
-        
+        // Use the same sanitized title for both filename and H1
+        const sanitizedTitle = this.sanitizeText(title);
+        let finalMarkdown = frontmatter + '# ' + sanitizedTitle + '\n\n';
+
+        console.log(`Content generation: Original title: "${title}"`);
+        console.log(`Content generation: Sanitized title for H1: "${sanitizedTitle}"`);
+        console.log(`Content generation: Filename will be: "${sanitizedTitle}.md"`);
+
         if (markdownContent) {
             finalMarkdown += markdownContent + '\n\n';
         }
