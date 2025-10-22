@@ -48,6 +48,14 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         console.log('EIS GRANOLA PLUGIN: Settings loaded');
         console.log('Current settings:', this.settings);
 
+        // Debug specific settings
+        console.log('🔧 SETTINGS DEBUG:');
+        console.log(`- includeFullTranscript: ${this.settings.includeFullTranscript}`);
+        console.log(`- syncDirectory: "${this.settings.syncDirectory}"`);
+        console.log(`- authKeyPath: "${this.settings.authKeyPath}"`);
+        console.log(`- titleSuffix: "${this.settings.titleSuffix}"`);
+        console.log(`- customProperties:`, this.settings.customProperties);
+
         // Debounce timer for directory changes
         this.directoryChangeTimer = null;
 
@@ -286,11 +294,19 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                         console.log('Has people field:', !!firstDoc.people);
                         console.log('Has google_calendar_event:', !!firstDoc.google_calendar_event);
                         console.log('Has participants:', !!firstDoc.participants);
-                        
+                        console.log('Has transcript field:', !!firstDoc.transcript);
+
+                        if (firstDoc.transcript) {
+                            console.log(`📋 TRANSCRIPT FOUND: ${firstDoc.transcript.length} chars`);
+                            console.log(`📋 TRANSCRIPT PREVIEW: ${firstDoc.transcript.substring(0, 200)}...`);
+                        } else {
+                            console.log('❌ NO TRANSCRIPT FIELD in first document');
+                        }
+
                         if (firstDoc.people) {
                             console.log('People field type:', typeof firstDoc.people);
                             console.log('People field length:', Array.isArray(firstDoc.people) ? firstDoc.people.length : 'not array');
-                            
+
                             if (Array.isArray(firstDoc.people) && firstDoc.people.length > 0) {
                                 console.log('First person keys:', Object.keys(firstDoc.people[0]));
                                 console.log('First person sample:', JSON.stringify(firstDoc.people[0], null, 2));
@@ -425,11 +441,17 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
     generateNoteContent(doc) {
         console.log(`=== GENERATING CONTENT FOR: ${doc.title || doc.id} ===`);
-        
+
         const title = doc.title || 'Untitled Granola Note';
         const docId = doc.id || 'unknown_id';
         const transcript = doc.transcript || '';
-        
+
+        console.log(`📋 TRANSCRIPT DEBUG:`);
+        console.log(`- includeFullTranscript setting: ${this.settings.includeFullTranscript}`);
+        console.log(`- transcript field exists: ${!!doc.transcript}`);
+        console.log(`- transcript length: ${transcript.length}`);
+        console.log(`- transcript preview: ${transcript.substring(0, 100)}...`);
+
         let contentToParse = null;
         if (doc.last_viewed_panel && doc.last_viewed_panel.content && doc.last_viewed_panel.content.type === 'doc') {
             contentToParse = doc.last_viewed_panel.content;
@@ -450,17 +472,17 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         // Generate frontmatter with custom properties BELOW standard properties
         let frontmatter = '---\n';
         frontmatter += `granola_id: ${docId}\n`;
-        
+
         const cleanTitle = title.replace(/"/g, '\\"');
         frontmatter += `title: "${cleanTitle}"\n`;
-        
+
         // Generate correct Granola URL
         const granolaUrl = `https://notes.granola.ai/d/${docId}`;
         frontmatter += `granola_url: "${granolaUrl}"\n`;
-        
+
         console.log(`Generated Granola URL: ${granolaUrl}`);
         console.log(`Document ID: ${docId}`);
-        
+
         if (doc.created_at) {
             frontmatter += `created_at: ${doc.created_at}\n`;
         }
@@ -474,7 +496,7 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                 if (prop.name && prop.value) {
                     const processedValue = this.processPropertyValue(prop.value, doc);
                     const values = processedValue.split(',').map(v => v.trim());
-                    
+
                     if (values.length > 1) {
                         // Multiple values - create YAML list without [[ ]]
                         frontmatter += `${prop.name}:\n`;
@@ -492,7 +514,7 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         }
 
         frontmatter += '---\n\n';
-        
+
         // Apply same formatting (prefix/suffix) as filename generation
         let formattedTitle = title;
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
@@ -502,7 +524,7 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             const suffix = this.settings.titleSuffix.replace('{date}', this.formatDateForTitle(doc.created_at));
             formattedTitle = `${formattedTitle}${suffix}`;
         }
-        
+
         // Use the same sanitized title for both filename and H1
         const sanitizedTitle = this.sanitizeText(formattedTitle);
         let finalMarkdown = frontmatter + '# ' + sanitizedTitle + '\n\n';
@@ -515,17 +537,21 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         if (markdownContent) {
             finalMarkdown += markdownContent + '\n\n';
         }
-        
+
+        // ✅ FULL TRANSCRIPT SECTION
         if (this.settings.includeFullTranscript && transcript) {
             finalMarkdown += '## Full Transcript\n\n' + transcript;
-            console.log(`Added full transcript section (${transcript.length} chars)`);
+            console.log(`✅ Added full transcript section (${transcript.length} chars)`);
         } else if (this.settings.includeFullTranscript && !transcript) {
-            console.log('Include transcript enabled but no transcript available');
+            console.log('❌ Include transcript enabled but no transcript available');
+            console.log('Available doc fields:', Object.keys(doc));
+        } else {
+            console.log('ℹ️ Include transcript disabled in settings');
         }
 
         console.log(`=== FINAL CONTENT (${finalMarkdown.length} chars) ===`);
         console.log(finalMarkdown.substring(0, 500) + (finalMarkdown.length > 500 ? '...' : ''));
-        
+
         return finalMarkdown;
     }
 
@@ -1036,8 +1062,10 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.includeFullTranscript || false)
                 .onChange(async (value) => {
+                    console.log(`🔧 TRANSCRIPT TOGGLE CHANGED: ${value}`);
                     this.plugin.settings.includeFullTranscript = value;
                     await this.plugin.saveData(this.plugin.settings);
+                    console.log(`🔧 TRANSCRIPT SETTING SAVED: ${this.plugin.settings.includeFullTranscript}`);
                 }));
 
         new obsidian.Setting(containerEl)
