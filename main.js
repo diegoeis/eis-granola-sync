@@ -317,7 +317,20 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                     
                     const documents = responseData.docs || [];
                     console.log(`Successfully fetched ${documents.length} documents`);
-                    
+
+                    // Debug all documents for date issues
+                    console.log('📅 ALL DOCUMENTS DATE DEBUG:');
+                    documents.forEach((doc, index) => {
+                        console.log(`Document ${index + 1} (${doc.id}):`);
+                        console.log(`  - created_at: "${doc.created_at}"`);
+                        console.log(`  - updated_at: "${doc.updated_at}"`);
+                        console.log(`  - title: "${doc.title}"`);
+                        if (doc.created_at) {
+                            const isDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(doc.created_at);
+                            console.log(`  - created_at is YYYY-MM-DD: ${isDateFormat}`);
+                        }
+                    });
+
                     if (documents.length > 0) {
                         const firstDoc = documents[0];
                         console.log('=== FIRST DOCUMENT DEBUG ===');
@@ -345,6 +358,19 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                                 console.log('People object keys:', Object.keys(firstDoc.people));
                                 console.log('People object sample:', JSON.stringify(firstDoc.people, null, 2));
                             }
+                        }
+
+                        // Debug the created_at field specifically
+                        console.log('📅 API DATE DEBUG:');
+                        console.log(`- firstDoc.created_at: "${firstDoc.created_at}"`);
+                        console.log(`- firstDoc.created_at type: ${typeof firstDoc.created_at}`);
+                        console.log(`- firstDoc.updated_at: "${firstDoc.updated_at}"`);
+                        console.log(`- firstDoc.updated_at type: ${typeof firstDoc.updated_at}`);
+
+                        // Check if created_at is already in YYYY-MM-DD format
+                        if (firstDoc.created_at) {
+                            const isDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(firstDoc.created_at);
+                            console.log(`- created_at is YYYY-MM-DD format: ${isDateFormat}`);
                         }
                     }
                     
@@ -417,13 +443,21 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
     }
 
     generateFilename(doc) {
+        console.log(`📅 FILENAME DEBUG:`);
+        console.log(`- doc.created_at: "${doc.created_at}"`);
+        console.log(`- doc.title: "${doc.title}"`);
+
         let formattedTitle = doc.title || 'Untitled';
 
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
-            const prefix = this.settings.titlePrefix.replace('{date}', this.formatDateForTitle(doc.created_at));
+            const formattedDate = this.formatDateForTitle(doc.created_at);
+            console.log(`📅 FILENAME DATE RESULT: "${formattedDate}"`);
+            const prefix = this.settings.titlePrefix.replace('{date}', formattedDate);
             formattedTitle = `${prefix}${formattedTitle}`;
         } else if (this.settings.titleFormat === 'suffix' && this.settings.titleSuffix) {
-            const suffix = this.settings.titleSuffix.replace('{date}', this.formatDateForTitle(doc.created_at));
+            const formattedDate = this.formatDateForTitle(doc.created_at);
+            console.log(`📅 FILENAME DATE RESULT: "${formattedDate}"`);
+            const suffix = this.settings.titleSuffix.replace('{date}', formattedDate);
             formattedTitle = `${formattedTitle}${suffix}`;
         }
 
@@ -434,6 +468,8 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
     }
 
     formatDateForTitle(dateString) {
+        console.log(`📅 FORMAT DATE FOR TITLE: "${dateString}"`);
+
         if (!dateString) {
             // Fallback to current date if no creation date available
             return this.formatDateString(new Date().toISOString().split('T')[0]);
@@ -442,17 +478,37 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         try {
             // If it's already in YYYY-MM-DD format, use as-is
             if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                console.log(`📅 Date already in YYYY-MM-DD format: "${dateString}"`);
                 return this.formatDateString(dateString);
             }
 
             // Parse ISO date string and format as configured
             const date = new Date(dateString);
+            console.log(`📅 Parsed date object:`, date);
+            console.log(`📅 Date getTime(): ${date.getTime()}`);
+            console.log(`📅 Date toISOString(): "${date.toISOString()}"`);
+            console.log(`📅 Date local: year=${date.getFullYear()}, month=${date.getMonth() + 1}, day=${date.getDate()}`);
+
             if (isNaN(date.getTime())) {
                 // If parsing fails, fallback to current date
                 return this.formatDateString(new Date().toISOString().split('T')[0]);
             }
 
-            return this.formatDateString(date.toISOString().split('T')[0]);
+            // Use local date instead of UTC to avoid timezone issues
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+
+            // Format using the configured format
+            const format = this.settings.dateFormat || 'YYYY-MM-DD';
+            let formatted = format
+                .replace('YYYY', year)
+                .replace('YY', String(year).slice(-2))
+                .replace('MM', month)
+                .replace('DD', day);
+
+            console.log(`📅 FORMATTED RESULT: "${formatted}" (format: ${format})`);
+            return formatted;
         } catch (error) {
             console.error('Error formatting date for title:', error);
             // Fallback to current date
@@ -546,13 +602,23 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
         frontmatter += '---\n\n';
 
+        console.log(`📅 DATE DEBUG:`);
+        console.log(`- doc.created_at: "${doc.created_at}"`);
+        console.log(`- dateFormat setting: "${this.settings.dateFormat}"`);
+        console.log(`- titleFormat: "${this.settings.titleFormat}"`);
+        console.log(`- titleSuffix: "${this.settings.titleSuffix}"`);
+
         // Apply same formatting (prefix/suffix) as filename generation
         let formattedTitle = title;
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
-            const prefix = this.settings.titlePrefix.replace('{date}', this.formatDateForTitle(doc.created_at));
+            const formattedDate = this.formatDateForTitle(doc.created_at);
+            console.log(`📅 DATE FORMAT RESULT: "${formattedDate}"`);
+            const prefix = this.settings.titlePrefix.replace('{date}', formattedDate);
             formattedTitle = `${prefix}${formattedTitle}`;
         } else if (this.settings.titleFormat === 'suffix' && this.settings.titleSuffix) {
-            const suffix = this.settings.titleSuffix.replace('{date}', this.formatDateForTitle(doc.created_at));
+            const formattedDate = this.formatDateForTitle(doc.created_at);
+            console.log(`📅 DATE FORMAT RESULT: "${formattedDate}"`);
+            const suffix = this.settings.titleSuffix.replace('{date}', formattedDate);
             formattedTitle = `${formattedTitle}${suffix}`;
         }
 
@@ -630,7 +696,20 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                 return this.formatDateString(new Date().toISOString().split('T')[0]);
             }
 
-            return this.formatDateString(date.toISOString().split('T')[0]);
+            // Use local date instead of UTC to avoid timezone issues
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+
+            // Format using the configured format
+            const format = this.settings.dateFormat || 'YYYY-MM-DD';
+            let formatted = format
+                .replace('YYYY', year)
+                .replace('YY', String(year).slice(-2))
+                .replace('MM', month)
+                .replace('DD', day);
+
+            return formatted;
         } catch (error) {
             console.error('Error formatting date for property:', error);
             // Fallback to current date
@@ -643,7 +722,25 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         const format = this.settings.dateFormat || 'YYYY-MM-DD';
 
         try {
-            const date = new Date(dateString + 'T00:00:00.000Z'); // Ensure UTC interpretation
+            // Parse the date string directly without forcing UTC
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                // If parsing fails, use current date as fallback
+                const fallbackDate = new Date();
+                const year = fallbackDate.getFullYear();
+                const month = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+                const day = String(fallbackDate.getDate()).padStart(2, '0');
+
+                let formatted = format
+                    .replace('YYYY', year)
+                    .replace('YY', String(year).slice(-2))
+                    .replace('MM', month)
+                    .replace('DD', day);
+
+                return formatted;
+            }
+
+            // Use local timezone instead of UTC to avoid timezone issues
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
