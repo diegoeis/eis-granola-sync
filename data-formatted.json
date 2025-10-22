@@ -1,0 +1,14 @@
+{
+    "syncDirectory": "",
+    "notePrefix": "",
+    "authKeyPath": "Library/Application Support/Granola/supabase.json",
+    "skipExistingNotes": false,
+    "notesToSync": 5,
+    "titleFormat": "suffix",
+    "titlePrefix": "",
+    "titleSuffix": " - {date}",
+    "includeFullTranscript": false,
+    "autoSyncInterval": 60,
+    "customProperties": [],
+    "dateFormat": "DD-MM-YYYY"
+}

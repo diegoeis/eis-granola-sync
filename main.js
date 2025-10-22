@@ -32,8 +32,21 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
     async onload() {
         console.log('EIS GRANOLA PLUGIN: Starting load process');
 
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // Load saved settings first, then merge with defaults
+        const savedSettings = await this.loadData() || {};
+
+        // Start with saved settings, then add defaults only for missing values
+        this.settings = { ...savedSettings };
+
+        // Add defaults only for missing or undefined values
+        for (const [key, defaultValue] of Object.entries(DEFAULT_SETTINGS)) {
+            if (this.settings[key] === undefined || this.settings[key] === null) {
+                this.settings[key] = defaultValue;
+            }
+        }
+
         console.log('EIS GRANOLA PLUGIN: Settings loaded');
+        console.log('Current settings:', this.settings);
 
         // Debounce timer for directory changes
         this.directoryChangeTimer = null;

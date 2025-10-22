@@ -1,9 +1,9 @@
 {
   "id": "eis-granola-sync",
   "name": "Eis Granola Sync",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "minAppVersion": "0.12.0",
-  "description": "Sync your Granola meeting notes to Obsidian",
+  "description": "Sync your Granola meeting notes to Obsidian with advanced features",
   "author": "Diego Eis",
   "authorUrl": "https://diegoeis.com/",
   "isDesktopOnly": false
