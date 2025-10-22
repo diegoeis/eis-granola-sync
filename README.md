@@ -21,8 +21,9 @@ A comprehensive Obsidian plugin for synchronizing meeting notes from Granola AI 
 
 ### Advanced Configuration
 - **Custom Properties System**: Define custom YAML properties for all synced notes
-- **Dynamic Placeholders**: Use `{attendees}` or `{date}` for dynamic content
+- **Dynamic Placeholders**: Use `{attendees}`, `{participants}` or `{date}` for dynamic content
 - **Date Formatting**: Customize how `{date}` placeholders are formatted in titles and properties
+- **Timezone Handling**: Uses local timezone instead of UTC to prevent date shift issues
 - **Email Name Formatting**: Convert emails like `john.doe@company.com` to `[[John Doe]]`
 - **List Generation**: Automatically create YAML lists from comma-separated values
 
@@ -215,10 +216,11 @@ The plugin includes comprehensive error handling for:
 
 ### Common Issues
 
-**Notes appearing empty:**
-- Check that Granola authentication file path is correct
-- Verify that meeting has structured content in Granola
-- Enable debug logging in console for detailed information
+**Dates showing wrong day:**
+- Check that your system timezone is correctly configured
+- The plugin now uses local timezone instead of UTC (fixed in v0.8.2)
+- Verify that the API response contains correct date values
+- Enable debug logging to see raw date values from API
 
 **Sync failing:**
 - Confirm Granola credentials are valid
@@ -238,6 +240,9 @@ Enable detailed logging by checking the browser console during sync operations. 
 - Content processing steps
 - File creation/update operations
 - Attendee extraction and formatting
+- **Date processing and timezone conversion**
+- **Raw API date values and formatted results**
+- Configuration loading and persistence
 
 ## Contributing
 
