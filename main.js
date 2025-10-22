@@ -39,10 +39,39 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         this.settings = { ...savedSettings };
 
         // Add defaults only for missing or undefined values
+        // But preserve empty strings that are intentional (like empty syncDirectory)
         for (const [key, defaultValue] of Object.entries(DEFAULT_SETTINGS)) {
-            if (this.settings[key] === undefined || this.settings[key] === null) {
+            if (this.settings[key] === undefined) {
                 this.settings[key] = defaultValue;
             }
+        }
+
+        // Special handling for string fields that should preserve empty values
+        const stringFields = ['syncDirectory', 'authKeyPath', 'titlePrefix', 'titleSuffix'];
+        for (const field of stringFields) {
+            if (savedSettings[field] !== undefined) {
+                this.settings[field] = savedSettings[field];
+            }
+        }
+
+        // Special handling for arrays and objects
+        if (savedSettings.customProperties && Array.isArray(savedSettings.customProperties)) {
+            this.settings.customProperties = savedSettings.customProperties;
+        }
+        if (savedSettings.includeFullTranscript !== undefined) {
+            this.settings.includeFullTranscript = savedSettings.includeFullTranscript;
+        }
+        if (savedSettings.skipExistingNotes !== undefined) {
+            this.settings.skipExistingNotes = savedSettings.skipExistingNotes;
+        }
+        if (savedSettings.notesToSync !== undefined) {
+            this.settings.notesToSync = savedSettings.notesToSync;
+        }
+        if (savedSettings.titleFormat !== undefined) {
+            this.settings.titleFormat = savedSettings.titleFormat;
+        }
+        if (savedSettings.dateFormat !== undefined) {
+            this.settings.dateFormat = savedSettings.dateFormat;
         }
 
         console.log('EIS GRANOLA PLUGIN: Settings loaded');
@@ -892,6 +921,8 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
 
     // Debounce function for directory changes
     debouncedDirectoryChange(value) {
+        console.log(`🔧 DEBOUNCED DIRECTORY CHANGE CALLED: "${value}"`);
+
         if (this.directoryChangeTimer) {
             clearTimeout(this.directoryChangeTimer);
         }
@@ -900,6 +931,11 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             const newValue = value.trim();
             const oldValue = this.settings.syncDirectory;
 
+            console.log(`🔧 PROCESSING DIRECTORY CHANGE:`);
+            console.log(`- oldValue: "${oldValue}"`);
+            console.log(`- newValue: "${newValue}"`);
+            console.log(`- current settings.syncDirectory: "${this.settings.syncDirectory}"`);
+
             if (newValue === '' || newValue === '/') {
                 this.settings.syncDirectory = '';
             } else {
@@ -907,6 +943,7 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
             }
 
             await this.saveData(this.settings);
+            console.log(`🔧 DIRECTORY CHANGE SAVED: "${this.settings.syncDirectory}"`);
 
             if (oldValue && oldValue !== this.settings.syncDirectory) {
                 await this.renameSyncDirectory(oldValue, this.settings.syncDirectory);
@@ -961,6 +998,7 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
                 .setPlaceholder('Granola')
                 .setValue(this.plugin.settings.syncDirectory || '')
                 .onChange((value) => {
+                    console.log(`🔧 SYNC DIRECTORY CHANGED: "${value}"`);
                     // Use debounced function instead of direct processing
                     this.plugin.debouncedDirectoryChange(value);
                 }));
