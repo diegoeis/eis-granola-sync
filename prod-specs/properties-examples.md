@@ -24,7 +24,7 @@ participants:
 
 When no name is available, the plugin extracts the name from the email and formats it:
 
-**Email:** `diego.eis@frota162.com.br`
+**Email:** `diego.eis@company.com.br`
 **Extracted name:** `diego eis`
 **Formatted name:** `Diego Eis`
 **Final result:** `[[Diego Eis]]`
@@ -33,6 +33,7 @@ When no name is available, the plugin extracts the name from the email and forma
 **Extracted name:** `douglas-roberto`
 **Formatted name:** `Douglas Roberto`
 **Final result:** `[[Douglas Roberto]]`
+
 
 ## Practical Examples
 
