@@ -482,32 +482,20 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                 return this.formatDateString(dateString);
             }
 
-            // Parse ISO date string and format as configured
-            const date = new Date(dateString);
-            console.log(`📅 Parsed date object:`, date);
-            console.log(`📅 Date getTime(): ${date.getTime()}`);
-            console.log(`📅 Date toISOString(): "${date.toISOString()}"`);
-            console.log(`📅 Date local: year=${date.getFullYear()}, month=${date.getMonth() + 1}, day=${date.getDate()}`);
+            // Extract date part from ISO string (e.g., "2024-10-22T15:30:00Z" → "2024-10-22")
+            const dateOnly = dateString.split('T')[0];
+            console.log(`📅 Extracted date part: "${dateOnly}"`);
 
-            if (isNaN(date.getTime())) {
-                // If parsing fails, fallback to current date
-                return this.formatDateString(new Date().toISOString().split('T')[0]);
-            }
-
-            // Use local date instead of UTC to avoid timezone issues
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-
-            // Format using the configured format
+            // Format using the configured format without timezone conversion
             const format = this.settings.dateFormat || 'YYYY-MM-DD';
             let formatted = format
-                .replace('YYYY', year)
-                .replace('YY', String(year).slice(-2))
-                .replace('MM', month)
-                .replace('DD', day);
+                .replace('YYYY', dateOnly.substring(0, 4))
+                .replace('YY', dateOnly.substring(2, 4))
+                .replace('MM', dateOnly.substring(5, 7))
+                .replace('DD', dateOnly.substring(8, 10));
 
             console.log(`📅 FORMATTED RESULT: "${formatted}" (format: ${format})`);
+            console.log(`📅 APPROACH: String manipulation (no timezone conversion)`);
             return formatted;
         } catch (error) {
             console.error('Error formatting date for title:', error);
@@ -689,25 +677,17 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                 return this.formatDateString(dateString);
             }
 
-            // Parse ISO date string and format as configured
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) {
-                // If parsing fails, fallback to current date
-                return this.formatDateString(new Date().toISOString().split('T')[0]);
-            }
-
-            // Use local date instead of UTC to avoid timezone issues
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
+            // Extract date part from ISO string without timezone conversion
+            const dateOnly = dateString.split('T')[0];
+            console.log(`📅 PROPERTY DATE: "${dateOnly}"`);
 
             // Format using the configured format
             const format = this.settings.dateFormat || 'YYYY-MM-DD';
             let formatted = format
-                .replace('YYYY', year)
-                .replace('YY', String(year).slice(-2))
-                .replace('MM', month)
-                .replace('DD', day);
+                .replace('YYYY', dateOnly.substring(0, 4))
+                .replace('YY', dateOnly.substring(2, 4))
+                .replace('MM', dateOnly.substring(5, 7))
+                .replace('DD', dateOnly.substring(8, 10));
 
             return formatted;
         } catch (error) {
@@ -722,35 +702,27 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         const format = this.settings.dateFormat || 'YYYY-MM-DD';
 
         try {
-            // Parse the date string directly without forcing UTC
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) {
-                // If parsing fails, use current date as fallback
-                const fallbackDate = new Date();
-                const year = fallbackDate.getFullYear();
-                const month = String(fallbackDate.getMonth() + 1).padStart(2, '0');
-                const day = String(fallbackDate.getDate()).padStart(2, '0');
-
+            // If it's already in YYYY-MM-DD format, use directly
+            if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
                 let formatted = format
-                    .replace('YYYY', year)
-                    .replace('YY', String(year).slice(-2))
-                    .replace('MM', month)
-                    .replace('DD', day);
+                    .replace('YYYY', dateString.substring(0, 4))
+                    .replace('YY', dateString.substring(2, 4))
+                    .replace('MM', dateString.substring(5, 7))
+                    .replace('DD', dateString.substring(8, 10));
 
                 return formatted;
             }
 
-            // Use local timezone instead of UTC to avoid timezone issues
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
+            // Extract date part from ISO string (e.g., "2024-10-22T15:30:00Z" → "2024-10-22")
+            const dateOnly = dateString.split('T')[0];
+            console.log(`📅 STRING FORMAT: "${dateOnly}" → "${format}"`);
 
-            // Replace format tokens with actual values
+            // Format using the configured format
             let formatted = format
-                .replace('YYYY', year)
-                .replace('YY', String(year).slice(-2))
-                .replace('MM', month)
-                .replace('DD', day);
+                .replace('YYYY', dateOnly.substring(0, 4))
+                .replace('YY', dateOnly.substring(2, 4))
+                .replace('MM', dateOnly.substring(5, 7))
+                .replace('DD', dateOnly.substring(8, 10));
 
             return formatted;
         } catch (error) {
