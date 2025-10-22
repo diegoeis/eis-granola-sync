@@ -110,11 +110,22 @@ customProperties: [
 - Static values → Used as-is
 - Multiple values → Converted to YAML lists
 
-### Date Formatting
-- **Configurable Format**: Support for standard date format tokens (YYYY-MM-DD, DD-MM-YYYY, etc.)
-- **Format Tokens**: `YYYY`, `YY`, `MM`, `DD` for year, month, day
-- **Automatic Processing**: Applied to both titles and custom properties
-- **Fallback Handling**: Graceful handling of invalid dates
+### Date String Processing
+```javascript
+// Simple extraction from ISO string
+const dateOnly = dateString.split('T')[0]; // "2024-10-22T15:30:00Z" → "2024-10-22"
+
+// Format using substring operations
+format.replace('YYYY', dateOnly.substring(0, 4))   // "2024"
+       .replace('MM', dateOnly.substring(5, 7))    // "10" 
+       .replace('DD', dateOnly.substring(8, 10))   // "22"
+```
+
+This approach:
+- **No timezone conversion**: Uses the exact date from API
+- **No Date object parsing**: Pure string manipulation
+- **Reliable**: Works consistently across all timezones
+- **Simple**: Easy to understand and debug
 
 ## File Management
 
@@ -161,6 +172,7 @@ customProperties: [
 - **Boolean Values**: Toggle states (like includeFullTranscript) properly saved and loaded
 - **Array Values**: Custom properties arrays maintained across plugin restarts
 - **Date Format**: User-configured date formatting preserved
+- **Timezone Independence**: Date formatting no longer affected by system timezone
 
 ## Error Handling
 

@@ -166,7 +166,7 @@ eis-granola-sync/
 - Basic content processing with ProseMirror conversion
 - Custom properties system with dynamic placeholders
 - Attendee formatting and extraction
-- Configurable date formatting for {date} placeholder
+- **Simple string-based date formatting** (no timezone conversion)
 - Comprehensive error handling and logging
 - Debounced input handling for better UX
 
