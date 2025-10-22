@@ -2,6 +2,9 @@
 
 A comprehensive Obsidian plugin for synchronizing meeting notes from Granola AI into your Obsidian vault with advanced customization options.
 
+![](https://i.imgur.com/IIa4yUl.png)
+
+
 ## Features
 
 ### Core Synchronization
@@ -18,15 +21,10 @@ A comprehensive Obsidian plugin for synchronizing meeting notes from Granola AI 
 
 ### Advanced Configuration
 - **Custom Properties System**: Define custom YAML properties for all synced notes
-- **Dynamic Placeholders**: Use `{attendees}` or `{participants}` to include formatted attendee lists
+- **Dynamic Placeholders**: Use `{attendees}` or `{date}` for dynamic content
+- **Date Formatting**: Customize how `{date}` placeholders are formatted in titles and properties
 - **Email Name Formatting**: Convert emails like `john.doe@company.com` to `[[John Doe]]`
 - **List Generation**: Automatically create YAML lists from comma-separated values
-
-### User Interface
-- **Organized Settings**: Clean, categorized settings interface
-- **Dynamic Forms**: Context-aware property addition forms
-- **Visual Feedback**: Success notifications with sync details
-- **Error Handling**: Comprehensive error reporting and logging
 
 ## Installation
 
@@ -56,9 +54,9 @@ The plugin will automatically detect your authentication token from this file.
 - **Skip Existing Notes**: Avoid re-syncing already imported notes
 
 #### File Generation
+- **Date Format**: Customize format for `{date}` placeholder (YYYY-MM-DD, DD-MM-YYYY, etc.)
 - **Include Full Transcript**: Add complete meeting transcripts to notes
-- **Title Format**: Add prefixes or suffixes to note titles
-- **Custom Properties**: Define additional frontmatter properties
+- **Title Format**: Add prefixes or suffixes to note titles using `{date}` placeholder
 
 ### Properties Customization
 
@@ -70,6 +68,7 @@ The plugin will automatically detect your authentication token from this file.
    - Static text: `completed`
    - Multiple values: `tag1, tag2, tag3`
    - Dynamic attendees: `{attendees}` or `{participants}`
+   - Meeting date: `{date}` (formatted according to Date Format setting)
 
 #### Attendee Processing
 
@@ -81,6 +80,22 @@ When using `{attendees}` or `{participants}` in property values:
   - `maria.silva@enterprise.org` → `[[Maria Silva]]`
 - **Multiple attendees**: Automatically formatted as YAML lists
 
+#### Date Format Configuration
+
+The `{date}` placeholder can be formatted using standard date format tokens:
+
+| Format | Example Output | Description |
+|--------|----------------|-------------|
+| `YYYY-MM-DD` | `2024-01-15` | ISO format (default) |
+| `DD-MM-YYYY` | `15-01-2024` | European format |
+| `MM/DD/YYYY` | `01/15/2024` | US format |
+| `DD/MM/YY` | `15/01/24` | Short European |
+| `YYYY-MM-DD` | `2024-01-15` | ISO format |
+
+**Usage Examples:**
+- Property value: `Meeting {date}` → `Meeting 15-01-2024`
+- Title suffix: ` - {date}` → `Product Review - 15-01-2024`
+
 #### Property Value Examples
 
 | Input | Result in YAML |
@@ -88,6 +103,7 @@ When using `{attendees}` or `{participants}` in property values:
 | `completed` | `status: "completed"` |
 | `tag1, tag2, tag3` | ```yaml<br>tags:<br>  - "tag1"<br>  - "tag2"<br>  - "tag3"<br>``` |
 | `{attendees}` | ```yaml<br>participants:<br>  - "[[John Doe]]"<br>  - "[[Maria Silva]]"<br>``` |
+| `Meeting {date}` | `title: "Meeting 15-01-2024"` |
 
 ## Usage Examples
 
@@ -108,7 +124,6 @@ participants:
 tags:
   - "meeting"
   - "product"
-  - "[[John Doe]]"
 ---
 
 # Product Team Meeting
@@ -134,9 +149,11 @@ tags:
   autoSyncInterval: 60, // Sync every hour
   titleFormat: "prefix",
   titlePrefix: "Meeting {date} - ",
+  dateFormat: "DD-MM-YYYY", // European date format
   customProperties: [
     { name: "status", value: "completed" },
     { name: "participants", value: "{attendees}" },
+    { name: "meeting_date", value: "{date}" },
     { name: "tags", value: "meeting, work, {attendees}" }
   ],
   includeFullTranscript: true

@@ -20,6 +20,18 @@ participants:
   - "[[Douglas Roberto]]"
 ```
 
+### {date}
+Replaces with the formatted meeting creation date using the configured date format.
+
+**Configuration example:**
+- Name: `meeting_date`
+- Value: `{date}`
+
+**Result in frontmatter (with DD-MM-YYYY format):**
+```yaml
+meeting_date: "15-01-2024"
+```
+
 ## Email Formatting
 
 When no name is available, the plugin extracts the name from the email and formats it:
@@ -83,20 +95,52 @@ status: "completed"
 categoria: "reunião-João Silva, Maria Santos, Diego Eis"
 ```
 
-### 5. Multiple Tags
+### 6. Meeting Date
 **Configuration:**
-- Name: `tags`
-- Value: `work, meeting, project`
+- Name: `meeting_date`
+- Value: `{date}`
+
+**Result (with DD-MM-YYYY format):**
+```yaml
+meeting_date: "15-01-2024"
+```
+
+### 7. Title with Date
+**Configuration:**
+- Name: `title`
+- Value: `Meeting {date} - Product Review`
 
 **Result:**
 ```yaml
-tags:
-  - "work"
-  - "meeting"
-  - "project"
+title: "Meeting 15-01-2024 - Product Review"
 ```
 
-## Advanced Features
+## Date Format Configuration
+
+The `{date}` placeholder uses the format configured in **File Generation → Date Format**.
+
+### Supported Format Tokens
+
+| Token | Description | Example |
+|-------|-------------|---------|
+| `YYYY` | 4-digit year | `2024` |
+| `YY` | 2-digit year | `24` |
+| `MM` | 2-digit month | `01` |
+| `DD` | 2-digit day | `15` |
+
+### Format Examples
+
+| Format | Result | Use Case |
+|--------|--------|----------|
+| `YYYY-MM-DD` | `2024-01-15` | ISO format |
+| `DD-MM-YYYY` | `15-01-2024` | European format |
+| `MM/DD/YYYY` | `01/15/2024` | US format |
+| `DD/MM/YY` | `15/01/24` | Short format |
+
+### Configuration
+1. Go to **File Generation** section
+2. Set **Date Format** to your preferred format
+3. Use `{date}` in title prefixes/suffixes or custom properties
 
 ### Multiple Values
 When you enter multiple values separated by commas, they become a YAML list:

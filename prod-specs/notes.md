@@ -106,8 +106,15 @@ customProperties: [
 ### Dynamic Content
 - `{attendees}` → Formatted participant names as YAML list
 - `{participants}` → Same as attendees (alias)
+- `{date}` → Formatted meeting creation date using configured date format
 - Static values → Used as-is
 - Multiple values → Converted to YAML lists
+
+### Date Formatting
+- **Configurable Format**: Support for standard date format tokens (YYYY-MM-DD, DD-MM-YYYY, etc.)
+- **Format Tokens**: `YYYY`, `YY`, `MM`, `DD` for year, month, day
+- **Automatic Processing**: Applied to both titles and custom properties
+- **Fallback Handling**: Graceful handling of invalid dates
 
 ## File Management
 
@@ -139,6 +146,21 @@ customProperties: [
 - **Form Management**: Show/hide property addition form
 - **List Updates**: Refresh property list after changes
 - **Validation**: Ensure property names and values are valid
+- **Debounced Input**: 1-second delay for directory changes to prevent excessive logging
+
+## Settings Persistence
+
+### Configuration Storage
+- **Data Location**: Settings stored in `data.json` file in plugin directory
+- **Format**: JSON with all user preferences and custom properties
+- **Merge Logic**: Preserves saved values over empty defaults
+- **Field Handling**: Special treatment for string fields that can be empty
+
+### Persistence Issues Fixed
+- **Empty String Preservation**: Empty syncDirectory and other string fields now persist correctly
+- **Boolean Values**: Toggle states (like includeFullTranscript) properly saved and loaded
+- **Array Values**: Custom properties arrays maintained across plugin restarts
+- **Date Format**: User-configured date formatting preserved
 
 ## Error Handling
 

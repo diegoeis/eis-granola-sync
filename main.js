@@ -84,6 +84,8 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         console.log(`- authKeyPath: "${this.settings.authKeyPath}"`);
         console.log(`- titleSuffix: "${this.settings.titleSuffix}"`);
         console.log(`- customProperties:`, this.settings.customProperties);
+        console.log(`- dateFormat: "${this.settings.dateFormat}"`);
+        console.log(`- titleFormat: "${this.settings.titleFormat}"`);
 
         // Debounce timer for directory changes
         this.directoryChangeTimer = null;
@@ -1090,8 +1092,10 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
                 .setPlaceholder('YYYY-MM-DD')
                 .setValue(this.plugin.settings.dateFormat || 'YYYY-MM-DD')
                 .onChange(async (value) => {
+                    console.log(`🔧 DATE FORMAT CHANGED: "${value}"`);
                     this.plugin.settings.dateFormat = value || 'YYYY-MM-DD';
                     await this.plugin.saveData(this.plugin.settings);
+                    console.log(`🔧 DATE FORMAT SAVED: "${this.plugin.settings.dateFormat}"`);
                 }));
 
         new obsidian.Setting(containerEl)

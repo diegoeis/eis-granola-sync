@@ -50,7 +50,8 @@ The EIS Granola Sync Plugin addresses these needs by providing:
 
 ### 5. Custom Properties System
 - **Dynamic Property Definition**: Users can define custom frontmatter properties
-- **Placeholder Support**: Use `{attendees}` or `{participants}` for dynamic content
+- **Placeholder Support**: Use `{attendees}`, `{participants}` or `{date}` for dynamic content
+- **Date Formatting**: Configurable date format for `{date}` placeholder (YYYY-MM-DD, DD-MM-YYYY, etc.)
 - **List Generation**: Convert comma-separated values to YAML lists
 - **Property Management**: Add, edit, and remove custom properties through the UI
 
@@ -162,9 +163,12 @@ eis-granola-sync/
 
 ### Phase 1 (Current Release)
 - Core synchronization functionality
-- Basic content processing
-- Custom properties system
-- Attendee formatting
+- Basic content processing with ProseMirror conversion
+- Custom properties system with dynamic placeholders
+- Attendee formatting and extraction
+- Configurable date formatting for {date} placeholder
+- Comprehensive error handling and logging
+- Debounced input handling for better UX
 
 ### Phase 2 (Next 3 Months)
 - **Template System**: Custom note templates for different meeting types
