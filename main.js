@@ -388,7 +388,6 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                 console.log('No response text available');
                 throw new Error('No response text received from API');
             }
-
         } catch (error) {
             console.error('Error in fetchGranolaDocuments:', error);
             console.error('Error type:', typeof error);
@@ -398,55 +397,27 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         }
     }
 
-    async shouldSyncNote(doc) {
-        if (this.settings.skipExistingNotes) {
-            const filename = this.generateFilename(doc);
-            const filePath = this.settings.syncDirectory ? `${this.settings.syncDirectory}/${filename}` : filename;
-            
-            try {
-                const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-                if (existingFile) {
-                    console.log(`Skipping existing note: ${doc.title || doc.id}`);
-                    return false;
-                }
-            } catch (error) {
-                // File doesn't exist, continue
+    extractTitleFromContent(content) {
+        // Extract title from frontmatter
+        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (frontmatterMatch) {
+            const frontmatter = frontmatterMatch[1];
+            const titleMatch = frontmatter.match(/^title:\s*["'](.*)["']/m);
+            if (titleMatch) {
+                return titleMatch[1];
             }
         }
 
-        return true;
-    }
-
-    async syncNote(doc) {
-        const filename = this.generateFilename(doc);
-        const filePath = this.settings.syncDirectory ? `${this.settings.syncDirectory}/${filename}` : filename;
-        const content = this.generateNoteContent(doc);
-
-        try {
-            console.log(`Syncing note: ${doc.title || doc.id} -> ${filename}`);
-            
-            const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-
-            if (existingFile) {
-                await this.app.vault.modify(existingFile, content);
-                console.log(`Updated note: ${filename}`);
-            } else {
-                await this.app.vault.create(filePath, content);
-                console.log(`Created note: ${filename}`);
-            }
-            
-            console.log(`Final content length for ${filename}: ${content.length} characters`);
-        } catch (error) {
-            console.error(`Failed to sync note ${doc.id}:`, error);
-            throw new Error(`Failed to write file ${filePath}: ${error.message}`);
+        // Fallback: extract from first heading
+        const headingMatch = content.match(/^# (.+)$/m);
+        if (headingMatch) {
+            return headingMatch[1];
         }
+
+        return 'Untitled';
     }
 
     generateFilename(doc) {
-        console.log(`📅 FILENAME DEBUG:`);
-        console.log(`- doc.created_at: "${doc.created_at}"`);
-        console.log(`- doc.title: "${doc.title}"`);
-
         let formattedTitle = doc.title || 'Untitled';
 
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
