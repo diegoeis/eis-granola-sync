@@ -356,10 +356,10 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         let formattedTitle = doc.title || 'Untitled';
 
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
-            const prefix = this.settings.titlePrefix.replace('{date}', new Date().toISOString().split('T')[0]);
+            const prefix = this.settings.titlePrefix.replace('{date}', this.formatDateForTitle(doc.created_at));
             formattedTitle = `${prefix}${formattedTitle}`;
         } else if (this.settings.titleFormat === 'suffix' && this.settings.titleSuffix) {
-            const suffix = this.settings.titleSuffix.replace('{date}', new Date().toISOString().split('T')[0]);
+            const suffix = this.settings.titleSuffix.replace('{date}', this.formatDateForTitle(doc.created_at));
             formattedTitle = `${formattedTitle}${suffix}`;
         }
 
@@ -369,6 +369,31 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         return `${sanitizedTitle}.md`;
     }
 
+    formatDateForTitle(dateString) {
+        if (!dateString) {
+            // Fallback to current date if no creation date available
+            return new Date().toISOString().split('T')[0];
+        }
+
+        try {
+            // If it's already in YYYY-MM-DD format, use as-is
+            if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                return dateString;
+            }
+
+            // Parse ISO date string and format as YYYY-MM-DD
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                // If parsing fails, fallback to current date
+                return new Date().toISOString().split('T')[0];
+            }
+
+            return date.toISOString().split('T')[0];
+        } catch (error) {
+            console.error('Error formatting date for title:', error);
+            // Fallback to current date
+            return new Date().toISOString().split('T')[0];
+        }
     sanitizeText(text) {
         // Remove characters that are invalid for file names and Obsidian links
         return text
@@ -452,10 +477,10 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         // Apply same formatting (prefix/suffix) as filename generation
         let formattedTitle = title;
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
-            const prefix = this.settings.titlePrefix.replace('{date}', new Date().toISOString().split('T')[0]);
+            const prefix = this.settings.titlePrefix.replace('{date}', this.formatDateForTitle(doc.created_at));
             formattedTitle = `${prefix}${formattedTitle}`;
         } else if (this.settings.titleFormat === 'suffix' && this.settings.titleSuffix) {
-            const suffix = this.settings.titleSuffix.replace('{date}', new Date().toISOString().split('T')[0]);
+            const suffix = this.settings.titleSuffix.replace('{date}', this.formatDateForTitle(doc.created_at));
             formattedTitle = `${formattedTitle}${suffix}`;
         }
         
