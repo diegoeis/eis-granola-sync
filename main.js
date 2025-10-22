@@ -14,25 +14,29 @@ function getDefaultAuthPath() {
 }
 
 const DEFAULT_SETTINGS = {
-    syncDirectory: 'Granola',
+    syncDirectory: '',
     notePrefix: '',
     authKeyPath: getDefaultAuthPath(),
     skipExistingNotes: false,
-    notesToSync: 1,
+    notesToSync: 5,
     titleFormat: 'none',
     titlePrefix: '',
     titleSuffix: '',
     includeFullTranscript: false,
-    autoSyncInterval: 0,
-    customProperties: []
+    autoSyncInterval: 60,
+    customProperties: [],
+    dateFormat: 'YYYY-MM-DD'  // Formatação de data para {date} placeholder
 };
 
 class EisGranolaSyncPlugin extends obsidian.Plugin {
     async onload() {
         console.log('EIS GRANOLA PLUGIN: Starting load process');
-        
+
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
         console.log('EIS GRANOLA PLUGIN: Settings loaded');
+
+        // Debounce timer for directory changes
+        this.directoryChangeTimer = null;
 
         if (this.settings.autoSyncInterval > 0) {
             this.startAutoSync();
@@ -372,27 +376,27 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
     formatDateForTitle(dateString) {
         if (!dateString) {
             // Fallback to current date if no creation date available
-            return new Date().toISOString().split('T')[0];
+            return this.formatDateString(new Date().toISOString().split('T')[0]);
         }
 
         try {
             // If it's already in YYYY-MM-DD format, use as-is
             if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-                return dateString;
+                return this.formatDateString(dateString);
             }
 
-            // Parse ISO date string and format as YYYY-MM-DD
+            // Parse ISO date string and format as configured
             const date = new Date(dateString);
             if (isNaN(date.getTime())) {
                 // If parsing fails, fallback to current date
-                return new Date().toISOString().split('T')[0];
+                return this.formatDateString(new Date().toISOString().split('T')[0]);
             }
 
-            return date.toISOString().split('T')[0];
+            return this.formatDateString(date.toISOString().split('T')[0]);
         } catch (error) {
             console.error('Error formatting date for title:', error);
             // Fallback to current date
-            return new Date().toISOString().split('T')[0];
+            return this.formatDateString(new Date().toISOString().split('T')[0]);
         }
     }
 
@@ -527,7 +531,65 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                 return value.replace('{attendees}', 'No attendees').replace('{participants}', 'No participants');
             }
         }
+
+        // Replace {date} with formatted meeting creation date
+        if (value.includes('{date}')) {
+            const formattedDate = this.formatDateForProperty(doc.created_at);
+            return value.replace('{date}', formattedDate);
+        }
+
         return value;
+    }
+
+    formatDateForProperty(dateString) {
+        if (!dateString) {
+            // Fallback to current date if no creation date available
+            dateString = new Date().toISOString();
+        }
+
+        try {
+            // If it's already in YYYY-MM-DD format, parse and format
+            if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                return this.formatDateString(dateString);
+            }
+
+            // Parse ISO date string and format as configured
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                // If parsing fails, fallback to current date
+                return this.formatDateString(new Date().toISOString().split('T')[0]);
+            }
+
+            return this.formatDateString(date.toISOString().split('T')[0]);
+        } catch (error) {
+            console.error('Error formatting date for property:', error);
+            // Fallback to current date
+            return this.formatDateString(new Date().toISOString().split('T')[0]);
+        }
+    }
+
+    formatDateString(dateString) {
+        // Simple date formatting based on configured format
+        const format = this.settings.dateFormat || 'YYYY-MM-DD';
+
+        try {
+            const date = new Date(dateString + 'T00:00:00.000Z'); // Ensure UTC interpretation
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+
+            // Replace format tokens with actual values
+            let formatted = format
+                .replace('YYYY', year)
+                .replace('YY', String(year).slice(-2))
+                .replace('MM', month)
+                .replace('DD', day);
+
+            return formatted;
+        } catch (error) {
+            console.error('Error formatting date string:', error);
+            return dateString; // Fallback to original format
+        }
     }
 
     extractAttendeeNames(doc) {
@@ -789,10 +851,39 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         }
     }
 
+    // Debounce function for directory changes
+    debouncedDirectoryChange(value) {
+        if (this.directoryChangeTimer) {
+            clearTimeout(this.directoryChangeTimer);
+        }
+
+        this.directoryChangeTimer = setTimeout(async () => {
+            const newValue = value.trim();
+            const oldValue = this.settings.syncDirectory;
+
+            if (newValue === '' || newValue === '/') {
+                this.settings.syncDirectory = '';
+            } else {
+                this.settings.syncDirectory = newValue;
+            }
+
+            await this.saveData(this.settings);
+
+            if (oldValue && oldValue !== this.settings.syncDirectory) {
+                await this.renameSyncDirectory(oldValue, this.settings.syncDirectory);
+            }
+
+            console.log(`Sync directory changed from "${oldValue}" to "${this.settings.syncDirectory}"`);
+        }, 1000); // Wait 1 second after user stops typing
+    }
+
     onunload() {
         console.log('EIS GRANOLA PLUGIN: Unloading');
         if (this.autoSyncInterval) {
             clearInterval(this.autoSyncInterval);
+        }
+        if (this.directoryChangeTimer) {
+            clearTimeout(this.directoryChangeTimer);
         }
     }
 }
@@ -830,23 +921,9 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
             .addText(text => text
                 .setPlaceholder('Granola')
                 .setValue(this.plugin.settings.syncDirectory || '')
-                .onChange(async (value) => {
-                    const newValue = value.trim();
-                    const oldValue = this.plugin.settings.syncDirectory;
-                    
-                    if (newValue === '' || newValue === '/') {
-                        this.plugin.settings.syncDirectory = '';
-                    } else {
-                        this.plugin.settings.syncDirectory = newValue;
-                    }
-                    
-                    await this.plugin.saveData(this.plugin.settings);
-                    
-                    if (oldValue && oldValue !== this.plugin.settings.syncDirectory) {
-                        await this.plugin.renameSyncDirectory(oldValue, this.plugin.settings.syncDirectory);
-                    }
-                    
-                    console.log(`Sync directory changed from "${oldValue}" to "${this.plugin.settings.syncDirectory}"`);
+                .onChange((value) => {
+                    // Use debounced function instead of direct processing
+                    this.plugin.debouncedDirectoryChange(value);
                 }));
 
         new obsidian.Setting(containerEl)
@@ -918,7 +995,7 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
         const addButtonContainer = propertiesSection.createDiv();
         new obsidian.Setting(addButtonContainer)
             .setName('Add Custom Property')
-            .setDesc('Add a custom property to be included in note frontmatter. Use {attendees} or {participants} to include meeting attendees.')
+            .setDesc('Add a custom property to be included in note frontmatter. Use {attendees}, {participants} or {date} for dynamic content.')
             .addButton(button => button
                 .setButtonText('Add Property')
                 .setCta()
@@ -928,6 +1005,17 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
 
         // File generation section
         containerEl.createEl('h3', {text: 'File Generation'});
+
+        new obsidian.Setting(containerEl)
+            .setName('Date Format')
+            .setDesc('Format for {date} placeholder in titles and custom properties (e.g., YYYY-MM-DD, DD-MM-YYYY)')
+            .addText(text => text
+                .setPlaceholder('YYYY-MM-DD')
+                .setValue(this.plugin.settings.dateFormat || 'YYYY-MM-DD')
+                .onChange(async (value) => {
+                    this.plugin.settings.dateFormat = value || 'YYYY-MM-DD';
+                    await this.plugin.saveData(this.plugin.settings);
+                }));
 
         new obsidian.Setting(containerEl)
             .setName('Include Full Transcript')
@@ -956,7 +1044,7 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
         if ((this.plugin.settings.titleFormat || 'none') !== 'none') {
             new obsidian.Setting(containerEl)
                 .setName(this.plugin.settings.titleFormat === 'prefix' ? 'Title Prefix' : 'Title Suffix')
-                .setDesc(`Text to ${this.plugin.settings.titleFormat === 'prefix' ? 'prefix' : 'suffix'} to note titles. Use {date} for meeting creation date.`)
+                .setDesc(`Text to ${this.plugin.settings.titleFormat === 'prefix' ? 'prefix' : 'suffix'} to note titles and custom properties. Use {date} for meeting creation date.`)
                 .addText(text => text
                     .setPlaceholder(this.plugin.settings.titleFormat === 'prefix' ? 'Meeting {date} - ' : ' - {date}')
                     .setValue(this.plugin.settings.titleFormat === 'prefix' ? (this.plugin.settings.titlePrefix || '') : (this.plugin.settings.titleSuffix || ''))
@@ -1013,7 +1101,7 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
         // Property value input
         const valueInput = formContainer.createEl('input', {
             type: 'text',
-            placeholder: 'Property value (use {attendees} or {participants} for meeting attendees)'
+            placeholder: 'Property value (use {attendees}, {participants} or {date} for dynamic content)'
         });
         valueInput.style.width = '48%';
 
