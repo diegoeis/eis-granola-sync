@@ -954,7 +954,7 @@ class EisGranolaSyncSettingTab extends obsidian.PluginSettingTab {
         if ((this.plugin.settings.titleFormat || 'none') !== 'none') {
             new obsidian.Setting(containerEl)
                 .setName(this.plugin.settings.titleFormat === 'prefix' ? 'Title Prefix' : 'Title Suffix')
-                .setDesc(`Text to ${this.plugin.settings.titleFormat === 'prefix' ? 'prefix' : 'suffix'} to note titles. Use {date} for current date.`)
+                .setDesc(`Text to ${this.plugin.settings.titleFormat === 'prefix' ? 'prefix' : 'suffix'} to note titles. Use {date} for meeting creation date.`)
                 .addText(text => text
                     .setPlaceholder(this.plugin.settings.titleFormat === 'prefix' ? 'Meeting {date} - ' : ' - {date}')
                     .setValue(this.plugin.settings.titleFormat === 'prefix' ? (this.plugin.settings.titlePrefix || '') : (this.plugin.settings.titleSuffix || ''))
