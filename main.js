@@ -417,7 +417,95 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         return 'Untitled';
     }
 
+    async findExistingNoteByGranolaId(granolaId) {
+        console.log(`🔍 Searching for existing note with granola_id: ${granolaId}`);
+
+        const files = this.app.vault.getMarkdownFiles();
+        console.log(`🔍 Scanning ${files.length} markdown files in vault...`);
+
+        for (const file of files) {
+            try {
+                const content = await this.app.vault.read(file);
+                const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+
+                if (frontmatterMatch) {
+                    const frontmatter = frontmatterMatch[1];
+                    const granolaIdMatch = frontmatter.match(/^granola_id:\s*(.+)$/m);
+
+                    if (granolaIdMatch && granolaIdMatch[1].trim() === granolaId) {
+                        console.log(`✅ Found existing note: ${file.path} (granola_id: ${granolaId})`);
+                        console.log(`📄 Current filename: ${file.name}`);
+                        console.log(`📄 Expected filename: ${this.generateFilename({id: granolaId, title: this.extractTitleFromContent(content)})}`);
+                        return file;
+                    }
+                }
+            } catch (error) {
+                console.error(`Error reading file ${file.path}:`, error);
+            }
+        }
+
+        console.log(`❌ No existing note found with granola_id: ${granolaId}`);
+        return null;
+    }
+
+    async shouldSyncNote(doc) {
+        const granolaId = doc.id;
+
+        if (this.settings.skipExistingNotes) {
+            const existingNote = await this.findExistingNoteByGranolaId(granolaId);
+            if (existingNote) {
+                console.log(`Skipping existing note with granola_id: ${granolaId}`);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    async syncNote(doc) {
+        const granolaId = doc.id;
+        const filename = this.generateFilename(doc);
+        const filePath = this.settings.syncDirectory ? `${this.settings.syncDirectory}/${filename}` : filename;
+        const content = this.generateNoteContent(doc);
+
+        try {
+            console.log(`Syncing note: ${doc.title || doc.id} (granola_id: ${granolaId}) -> ${filename}`);
+
+            // First check if there's an existing note with the same granola_id
+            const existingNote = await this.findExistingNoteByGranolaId(granolaId);
+
+            if (existingNote) {
+                // Update existing note (even if filename changed)
+                await this.app.vault.modify(existingNote, content);
+                console.log(`✅ Updated existing note: ${existingNote.path} (granola_id: ${granolaId})`);
+
+                // If the filename changed, rename the file to match new title
+                const expectedPath = filePath;
+                const currentPath = existingNote.path;
+
+                if (currentPath !== expectedPath) {
+                    console.log(`📝 Renaming file: ${currentPath} -> ${expectedPath}`);
+                    await this.app.vault.rename(existingNote, expectedPath);
+                    console.log(`✅ Renamed file to match new title: ${expectedPath}`);
+                }
+            } else {
+                // Create new note
+                await this.app.vault.create(filePath, content);
+                console.log(`✅ Created new note: ${filename} (granola_id: ${granolaId})`);
+            }
+
+            console.log(`Final content length for ${filename}: ${content.length} characters`);
+        } catch (error) {
+            console.error(`Failed to sync note ${granolaId}:`, error);
+            throw new Error(`Failed to sync note ${filePath}: ${error.message}`);
+        }
+    }
+
     generateFilename(doc) {
+        console.log(`📅 FILENAME DEBUG:`);
+        console.log(`- doc.created_at: "${doc.created_at}"`);
+        console.log(`- doc.title: "${doc.title}"`);
+
         let formattedTitle = doc.title || 'Untitled';
 
         if (this.settings.titleFormat === 'prefix' && this.settings.titlePrefix) {
