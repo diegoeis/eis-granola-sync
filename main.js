@@ -158,6 +158,13 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
                     }
                 } catch (error) {
                     console.error(`Error syncing document ${doc.id}:`, error);
+                    // Se o erro for de conteúdo inválido, apenas log e continue
+                    if (error.message && error.message.includes('no valid content')) {
+                        console.log(`⏭️ Skipping document ${doc.id} due to invalid content`);
+                    } else {
+                        // Outros erros são mais sérios
+                        throw error;
+                    }
                 }
             }
             
@@ -529,9 +536,11 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
     formatDateForTitle(dateString) {
         console.log(`📅 FORMAT DATE FOR TITLE: "${dateString}"`);
 
-        if (!dateString) {
+        if (!dateString || dateString === 'undefined') {
             // Fallback to current date if no creation date available
-            return this.formatDateString(new Date().toISOString().split('T')[0]);
+            const fallbackDate = new Date().toISOString().split('T')[0];
+            console.log(`📅 DATE FALLBACK: Using current date "${fallbackDate}"`);
+            return this.formatDateString(fallbackDate);
         }
 
         try {
@@ -586,22 +595,42 @@ class EisGranolaSyncPlugin extends obsidian.Plugin {
         console.log(`- transcript length: ${transcript.length}`);
         console.log(`- transcript preview: ${transcript.substring(0, 100)}...`);
 
-        let contentToParse = null;
-        if (doc.last_viewed_panel && doc.last_viewed_panel.content && doc.last_viewed_panel.content.type === 'doc') {
-            contentToParse = doc.last_viewed_panel.content;
-            console.log('Using last_viewed_panel.content for structured content');
-        } else if (doc.notes?.content) {
-            contentToParse = doc.notes.content;
-            console.log('Using notes.content for structured content');
+        // DEBUG: Check for alternative content sources
+        console.log(`🔍 CONTENT SOURCES DEBUG:`);
+        console.log(`- doc.last_viewed_panel exists: ${!!doc.last_viewed_panel}`);
+        console.log(`- doc.last_viewed_panel.content exists: ${!!doc.last_viewed_panel?.content}`);
+        console.log(`- doc.notes exists: ${!!doc.notes}`);
+        console.log(`- doc.notes.content exists: ${!!doc.notes?.content}`);
+        console.log(`- doc.notes_plain exists: ${!!doc.notes_plain}`);
+        console.log(`- doc.notes_markdown exists: ${!!doc.notes_markdown}`);
+        console.log(`- doc.overview exists: ${!!doc.overview}`);
+        console.log(`- doc.summary exists: ${!!doc.summary}`);
+
+        // VALIDAÇÃO ESTRITA como no plugin original
+        const contentToParse = doc.last_viewed_panel?.content;
+        let markdownContent = '';
+
+        if (
+            !contentToParse ||
+            typeof contentToParse === "string" ||
+            contentToParse.type !== "doc"
+        ) {
+            console.log('❌ SKIPPING: Document has no valid last_viewed_panel.content');
+            console.log('🔍 Available fields:', Object.keys(doc));
+            
+            // NÃO gera nota se não tiver conteúdo válido
+            throw new Error(`Document ${doc.id} has no valid content to parse`);
         }
 
-        let markdownContent = '';
-        if (contentToParse) {
-            markdownContent = this.convertProseMirrorToMarkdown(contentToParse);
-            console.log(`Converted structured content to ${markdownContent.length} chars of markdown`);
-        } else {
-            console.log('No structured content found');
+        console.log('✅ Using last_viewed_panel.content for structured content');
+        markdownContent = this.convertProseMirrorToMarkdown(contentToParse);
+        
+        if (!markdownContent || markdownContent.trim().length === 0) {
+            console.log('❌ SKIPPING: Converted content is empty');
+            throw new Error(`Document ${doc.id} converted to empty content`);
         }
+
+        console.log(`✅ Converted structured content to ${markdownContent.length} chars of markdown`);
 
         // Generate frontmatter with custom properties BELOW standard properties
         let frontmatter = '---\n';
